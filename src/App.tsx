@@ -1,5 +1,6 @@
 import { AppRouter } from './routes/AppRouter';
 import { Link } from 'react-router-dom';
+import ConsoleOutput from './components/ConsoleOutput';
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
 
       <main className="max-w-6xl w-full mx-auto p-4">
         <AppRouter />
+        <ConsoleOutput />
       </main>
     </div>
   );
