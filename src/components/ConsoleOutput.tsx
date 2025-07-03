@@ -18,7 +18,7 @@ export default function ConsoleOutput() {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 w-full max-h-64 overflow-y-auto bg-black text-sm font-mono p-4 z-50 shadow-lg border-t border-gray-700">
+    <div className="overflow-y-auto bg-black text-sm font-mono p-4 z-50 shadow-lg border-t border-gray-700">
       <div className="mb-2 font-bold text-white">🧪 Consola en pantalla:</div>
       {logs.map((log, index) => (
         <div key={index} className={`whitespace-pre-wrap ${getColor(log.type)}`}>

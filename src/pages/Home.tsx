@@ -1,4 +1,3 @@
-// src/pages/Home.tsx
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
@@ -11,7 +10,7 @@ export default function Home() {
   const status = useAppSelector((state) => state.oompas.status);
   const page = useAppSelector((state) => state.oompas.page);
   const hasMore = useAppSelector((state) => state.oompas.hasMore);
-  const fetchedAt = useAppSelector((state) => state.oompas.lastFetchedAt); // desde Redux
+  const fetchedAt = useAppSelector((state) => state.oompas.lastFetchedAt);
   const observerRef = useRef<HTMLDivElement | null>(null);
 
   const [nameFilter, setNameFilter] = useState('');
@@ -23,15 +22,34 @@ export default function Home() {
   const queryParam = searchParams.get('q');
   const query = typeof queryParam === 'string' ? queryParam.trim() : '';
 
+  const [logMessages, setLogMessages] = useState<string[]>([]);
+
+  function log(...args: any[]) {
+    console.log(...args);
+
+    const isStyledLog = args.length > 1 && typeof args[0] === 'string' && args[0].startsWith('%c');
+    if (isStyledLog) return; // ⛔ Ignorar logs estilizados del navegador
+
+    const plainText = args
+      .filter((arg) => typeof arg === 'string')
+      .map((str) => str.replace(/%[csdifoO]/g, '').trim())
+      .join(' ')
+      .trim();
+
+    if (plainText) {
+      setLogMessages((prev) => [...prev, `[LOG] ${plainText}`]);
+    }
+  }
+
   useEffect(() => {
     const now = Date.now();
     const oneDay = 24 * 60 * 60 * 1000;
     const isFresh = fetchedAt && now - fetchedAt < oneDay;
 
     if (isFresh) {
-      console.log(`🟢 Lista cargada desde caché (última vez: ${new Date(fetchedAt).toLocaleString()})`);
+      log(`🟢 Lista cargada desde caché (última vez: ${new Date(fetchedAt).toLocaleString()})`);
     } else {
-      console.log('🔵 No hay caché reciente de la lista. Solicitando página 1...');
+      log('🔵 No hay caché reciente de la lista. Solicitando página 1...');
       dispatch(fetchOompas(1));
     }
   }, [dispatch, fetchedAt]);
@@ -68,10 +86,11 @@ export default function Home() {
     });
   }, [list, debouncedName, debouncedProfession, query]);
 
-  // Logs de depuración
-  console.log('➡️ FILTRO:', { debouncedName, debouncedProfession, query });
-  console.log('➡️ LISTA ORIGINAL:', list);
-  console.log('➡️ LISTA FILTRADA:', filteredList);
+  // Nuevo efecto solo para loguear resultados
+  useEffect(() => {
+    log(`➡️ LISTA ORIGINAL: ${list.length}`);
+    log(`➡️ LISTA FILTRADA: ${filteredList.length}`);
+  }, [list.length, filteredList.length]);
 
   return (
     <div className="p-4">
@@ -79,7 +98,6 @@ export default function Home() {
 
       {/* Filtros */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        {/* Nombre con icono */}
         <div className="relative flex-1">
           <input
             type="text"
@@ -94,8 +112,6 @@ export default function Home() {
             className="absolute left-2 top-2.5 h-5 w-5 opacity-50"
           />
         </div>
-
-        {/* Profesión */}
         <div className="relative flex-1">
           <input
             type="text"
@@ -112,7 +128,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Mensaje si no hay resultados */}
+      {/* Resultado vacío */}
       {filteredList.length === 0 && (
         <p className="text-gray-500 text-center">No hay resultados para los filtros aplicados.</p>
       )}
@@ -142,10 +158,28 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Carga más */}
+      {/* Scroll infinito */}
       <div ref={observerRef} className="h-1" />
       {status === 'loading' && !debouncedName && !debouncedProfession && !query && (
         <p className="text-center mt-4 text-blue-500">Cargando más...</p>
+      )}
+
+      {/* Consola visual */}
+      {logMessages.length > 0 && (
+        <div className="mt-10 bg-black text-green-400 text-sm p-4 rounded shadow-inner max-h-64 overflow-y-auto font-mono">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-white font-bold">🧪 Consola visual</h2>
+            <button
+              className="text-xs text-red-400 underline"
+              onClick={() => setLogMessages([])}
+            >
+              Limpiar
+            </button>
+          </div>
+          {logMessages.map((line, i) => (
+            <div key={i}>{line}</div>
+          ))}
+        </div>
       )}
     </div>
   );
