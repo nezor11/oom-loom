@@ -1,4 +1,3 @@
-// src/hooks/useConsoleCapture.ts
 import { useEffect, useState } from 'react';
 
 type LogEntry = {
@@ -15,10 +14,20 @@ export function useConsoleCapture() {
     const originalWarn = console.warn;
     const originalInfo = console.info;
 
-    const capture = (type: LogEntry['type'], ...args: any[]) => {
-      const message = args.map((arg) =>
-        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-      ).join(' ');
+    const shouldIgnore = (args: unknown[]) =>
+      args.length > 1 &&
+      typeof args[0] === 'string' &&
+      args[0].startsWith('%c');
+
+    const capture = (type: LogEntry['type'], ...args: unknown[]) => {
+      if (shouldIgnore(args)) return;
+
+      const message = args
+        .map((arg) =>
+          typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+        )
+        .join(' ');
+
       setLogs((prev) => [...prev, { type, message }]);
     };
 

@@ -1,8 +1,10 @@
+// src/pages/Home.tsx
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchOompas } from '../features/oompas/oompasSlice';
 import { useDebounce } from 'use-debounce';
+import ConsolePanel from '../components/ConsolePanel';
 
 export default function Home() {
   const dispatch = useAppDispatch();
@@ -22,34 +24,15 @@ export default function Home() {
   const queryParam = searchParams.get('q');
   const query = typeof queryParam === 'string' ? queryParam.trim() : '';
 
-  const [logMessages, setLogMessages] = useState<string[]>([]);
-
-  function log(...args: any[]) {
-    console.log(...args);
-
-    const isStyledLog = args.length > 1 && typeof args[0] === 'string' && args[0].startsWith('%c');
-    if (isStyledLog) return; // ⛔ Ignorar logs estilizados del navegador
-
-    const plainText = args
-      .filter((arg) => typeof arg === 'string')
-      .map((str) => str.replace(/%[csdifoO]/g, '').trim())
-      .join(' ')
-      .trim();
-
-    if (plainText) {
-      setLogMessages((prev) => [...prev, `[LOG] ${plainText}`]);
-    }
-  }
-
   useEffect(() => {
     const now = Date.now();
     const oneDay = 24 * 60 * 60 * 1000;
     const isFresh = fetchedAt && now - fetchedAt < oneDay;
 
     if (isFresh) {
-      log(`🟢 Lista cargada desde caché (última vez: ${new Date(fetchedAt).toLocaleString()})`);
+      console.log(`🟢 Lista cargada desde caché (última vez: ${new Date(fetchedAt).toLocaleString()})`);
     } else {
-      log('🔵 No hay caché reciente de la lista. Solicitando página 1...');
+      console.log('🔵 No hay caché reciente de la lista. Solicitando página 1...');
       dispatch(fetchOompas(1));
     }
   }, [dispatch, fetchedAt]);
@@ -60,6 +43,7 @@ export default function Home() {
 
     const observer = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting && hasMore && status === 'succeeded') {
+        console.log(`🔵 Scroll infinito: cargando página ${page + 1}...`);
         dispatch(fetchOompas(page + 1));
       }
     });
@@ -71,7 +55,7 @@ export default function Home() {
   const filteredList = useMemo(() => {
     const normalizedQuery = query.toLowerCase();
 
-    return list.filter((oompa) => {
+    const filtered = list.filter((oompa) => {
       const fullName = `${oompa.first_name ?? ''} ${oompa.last_name ?? ''}`.toLowerCase();
       const profession = oompa.profession?.toLowerCase() ?? '';
 
@@ -84,12 +68,14 @@ export default function Home() {
 
       return nameMatch && professionMatch && queryMatch;
     });
+
+    return filtered;
   }, [list, debouncedName, debouncedProfession, query]);
 
-  // Nuevo efecto solo para loguear resultados
+  // Log lengths for debug
   useEffect(() => {
-    log(`➡️ LISTA ORIGINAL: ${list.length}`);
-    log(`➡️ LISTA FILTRADA: ${filteredList.length}`);
+    console.log(`➡️ LISTA ORIGINAL: ${list.length}`);
+    console.log(`➡️ LISTA FILTRADA: ${filteredList.length}`);
   }, [list.length, filteredList.length]);
 
   return (
@@ -128,7 +114,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Resultado vacío */}
+      {/* Mensaje si no hay resultados */}
       {filteredList.length === 0 && (
         <p className="text-gray-500 text-center">No hay resultados para los filtros aplicados.</p>
       )}
@@ -165,22 +151,7 @@ export default function Home() {
       )}
 
       {/* Consola visual */}
-      {logMessages.length > 0 && (
-        <div className="mt-10 bg-black text-green-400 text-sm p-4 rounded shadow-inner max-h-64 overflow-y-auto font-mono">
-          <div className="flex justify-between items-center mb-2">
-            <h2 className="text-white font-bold">🧪 Consola visual</h2>
-            <button
-              className="text-xs text-red-400 underline"
-              onClick={() => setLogMessages([])}
-            >
-              Limpiar
-            </button>
-          </div>
-          {logMessages.map((line, i) => (
-            <div key={i}>{line}</div>
-          ))}
-        </div>
-      )}
+      <ConsolePanel />
     </div>
   );
 }
